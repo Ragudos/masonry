@@ -1,0 +1,5 @@
+LICENSE
+*.config.js
+node_modules
+.gitignore
+README.md

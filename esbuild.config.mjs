@@ -7,7 +7,6 @@ const config = {
     bundle: true,
     outdir: "dist",
     entryPoints: ["index.js"],
-
 };
 
 /**

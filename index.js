@@ -20,7 +20,7 @@ class Masonry {
      *
      * @returns {boolean} a bool whether `rect1` collides with `rect2`
      */
-    #collides(rect1, rect2) {
+    #rectanglesCollides(rect1, rect2) {
         return (
             rect1.positionX <= rect2.positionX + rect2.width &&
             rect1.positionX + rect1.width >= rect2.positionX &&

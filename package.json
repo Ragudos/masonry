@@ -1,14 +1,14 @@
 {
   "name": "@aaronragudos/masonry",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
   "exports": {
     "./index.esm.js": "./dist/index.esm.js"
   },
   "scripts": {
-    "format": "prettier --write \"./index.js\" \"./esbuild.config.mjs\"",
-    "build": "node esbuild.config.mjs"
+    "format": "prettier --write \"./index.ts\" \"./*.config.cjs\"",
+    "build": "rollup --config rollup.config.cjs"
   },
   "keywords": [],
   "author": "Aaron Ragudos",
@@ -17,7 +17,8 @@
   "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
   "description": "A library for the client to create masonry layouts",
   "devDependencies": {
-    "esbuild": "^0.23.1",
-    "prettier": "^3.3.3"
+    "prettier": "^3.3.3",
+    "rollup": "^4.21.3",
+    "typescript": "^5.6.2"
   }
 }

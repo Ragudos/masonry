@@ -1,3 +1,5 @@
+// TODO: A way to resize elements, making them more responsive
+
 /**
  * @typedef {Object} Rectangle
  * @property {number} positionX
@@ -6,12 +8,77 @@
  * @property {number} height
  */
 
+/**
+ *
+ * @typedef {Object} MasonryItem
+ * @property {HTMLElement} element
+ * @property {Rectangle} shape
+ * @property {boolean} isPositioned
+ */
+
 class Masonry {
     /**
      *
-     * @param {HTMLElement[] | string} elements Either a list of html elements or a className to target
+     * @type {MasonryItem[]}
      */
-    constructor(elements) {}
+    #items;
+
+    /**
+     *
+     * @param {HTMLElement[]} items
+     */
+    constructor(items) {
+        for (let i = 0; i < items.length; ++i) {
+            items[i].style.position = "absolute";
+        }
+
+        this.#items = items.map((el) => {
+            const elDimensions = el.getBoundingClientRect();
+            const position = this.#getPositionOf(elDimensions);
+
+            return {
+                element: el,
+                shape: {
+                    width: elDimensions.width,
+                    height: elDimensions.height,
+                    positionX: position.left,
+                    positionY: position.top,
+                },
+                isPositioned: false,
+            };
+        });
+    }
+
+    #getDocumentScrollPosition() {
+        return {
+            top: window.scrollY || document.documentElement.scrollTop,
+            left: window.scrollX || document.documentElement.scrollLeft,
+        };
+    }
+
+    /**
+     *
+     * @param {HTMLElement | DOMRect} el
+     */
+    #getPositionOf(el) {
+        const scrollPos = this.#getDocumentScrollPosition();
+        /**
+         *
+         * @type {DOMRect}
+         */
+        let elDimensions;
+
+        if (el instanceof DOMRect) {
+            elDimensions = el;
+        } else {
+            elDimensions = el.getBoundingClientRect();
+        }
+
+        return {
+            top: scrollPos.top + elDimensions.top,
+            left: scrollPos.left + elDimensions.left,
+        };
+    }
 
     /**
      *
@@ -27,6 +94,74 @@ class Masonry {
             rect1.positionY <= rect2.positionY + rect2.height &&
             rect1.positionY + rect1.height >= rect2.positionY
         );
+    }
+
+    /**
+     *
+     * Positions the elements in masonry format
+     */
+    reposition() {
+        const columnWidth = window.innerWidth - 300;
+        // TODO: Check if we need to reposition and such
+        // This is just a prototype and bad code
+
+        for (let i = 0; i < this.#items.length; ++i) {
+            const itemToPosition = this.#items[i];
+
+            if (i === 0) {
+                continue;
+            }
+
+            const itemBefore = this.#items[i - 1];
+            const newPosX =
+                itemBefore.shape.positionX + itemBefore.shape.width + 2;
+            let newPosY = itemBefore.shape.positionY + itemBefore.shape.height + 2;
+
+            /**
+             * @type {Rectangle}
+             */
+            const tmpShape = {
+                positionX: newPosX >= columnWidth ? 8 : newPosX,
+                // We should start at the column above usssssssssssssssssssssssss
+                positionY: itemToPosition.shape.positionY,
+                width: itemToPosition.shape.width,
+                height: itemToPosition.shape.height,
+            };
+
+            let shouldMoveDown = false;
+
+            // Very inefficient
+            // we start from top
+            // if collides, means we on same column
+            // so move down
+            // and update tmpshape to be that.
+            for (let j = 0; j < i; ++j) {
+                if (this.#rectanglesCollides(tmpShape, this.#items[j].shape)) {
+                    const newP = this.#items[j].shape.positionY +
+                        this.#items[j].shape.height +
+                        2;
+                    newPosY = newP;
+
+                    tmpShape.positionY = newPosY
+                    shouldMoveDown = true;
+                }
+            }
+
+            if (newPosX >= columnWidth) {
+                itemToPosition.element.style.top = newPosY + "px";
+                itemToPosition.shape.positionY = newPosY;
+
+                continue;
+            }
+
+            itemToPosition.element.style.left = newPosX + "px";
+            itemToPosition.shape.positionX = newPosX;
+
+            if (shouldMoveDown) {
+                itemToPosition.element.style.top = newPosY + "px";
+                itemToPosition.shape.positionY = newPosY;
+            }
+        }
     }
 }
 

@@ -12,7 +12,7 @@ const config = {
 /**
  * @type {esbuild.Format[]}
  */
-const formats = ["iife", "esm"];
+const formats = ["esm"];
 
 for (const format of formats) {
     esbuild.buildSync({

@@ -135,6 +135,10 @@ class Masonry {
             // if collides, means we on same column
             // so move down
             // and update tmpshape to be that.
+            // We cannot instantly have the nearest column above since the tmpshape starts
+            // at the very beginning/top, so the collision detection will return false.
+            // Possibly, we can make a function to detect whether a rect is in a column of another's.
+            // Either with quad trees, or other algorithms.
             for (let j = 0; j < i; ++j) {
                 if (this.#rectanglesCollides(tmpShape, this.#items[j].shape)) {
                     const newP = this.#items[j].shape.positionY +

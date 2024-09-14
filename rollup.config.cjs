@@ -1,3 +1,5 @@
+const typescript = require("@rollup/plugin-typescript");
+
 /**
  * @type {import("rollup").RollupOptions}
  */
@@ -5,14 +7,14 @@ module.exports = {
     input: "index.ts",
     output: [
         {
-            dir: "dist",
-            file: "index.esm.js",
+            file: "dist/index.esm.js",
             format: "esm",
         },
         {
-            dir: "dist",
-            file: "index.umd.js",
+            file: "dist/index.umd.js",
             format: "umd",
+            name: "Masonry",
         },
     ],
+    plugins: [typescript()],
 };

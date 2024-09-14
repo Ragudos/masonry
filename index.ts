@@ -1,5 +1,9 @@
-type Coordinate = {x: number; y: number};
-
+type Coordinate = { x: number; y: number };
+type MasonryBrick = {
+    element: HTMLElement;
+    shape: Rectangle;
+    isPositioned: boolean;
+};
 type MasonryProps = {
     /**
      *
@@ -11,6 +15,28 @@ type MasonryProps = {
      * @default 240
      */
     columnWidth?: string | number;
+    /**
+     *
+     * @default 12
+     */
+    columnGap?: number;
+
+    /**
+     *
+     * @default 12
+     */
+    rowGap?: number;
+
+    /**
+     *
+     * The boundary of the Masonry, or the `container` that
+     * contains the contents of the bricks. If `container`
+     * is provided, then that will be the default. This will
+     * use `getElementById` if provided.
+     *
+     * @default Window | container
+     */
+    boundary?: string;
 } & (
     | {
           /**
@@ -64,6 +90,13 @@ class Rectangle extends Shape {
             );
         }
     }
+}
+
+function isNumber(n: string): boolean {
+    return typeof n === "string"
+        ? (Number?.isFinite ? Number.isFinite(n) : isFinite(+n)) &&
+              n.trim() !== ""
+        : n - n === 0;
 }
 
 function getScrollPosition(): Coordinate {
@@ -122,36 +155,48 @@ function getYPositionOfElement(elOrIdentifier: string | HTMLElement): number {
 }
 
 class Masonry {
-    /**
-     *
-     * Used to easily find the elements in a column and such.
-     */
-    #positionCache: string[][];
     #columnWidth: number;
+    #boundary: Window | HTMLElement;
     #container: undefined | HTMLElement;
-    #elements: HTMLElement[];
+    #bricks: MasonryBrick[];
+
+    #columnGap: number;
+    #rowGap: number;
 
     constructor(props: MasonryProps) {
-        this.#positionCache = [];
-
         this.#container =
             "container" in props
                 ? (document.querySelector(props.container) as HTMLElement)
                 : undefined;
+        this.#boundary = props.boundary
+            ? document.getElementById(props.boundary)
+            : this.#container
+              ? this.#container
+              : window;
         this.#columnWidth =
             typeof props.columnWidth === "string"
                 ? getXPositionOfElement(props.columnWidth)
                 : props.columnWidth;
 
+        this.#columnGap =
+            props.columnGap !== undefined && props.columnGap !== null
+                ? props.columnGap
+                : 12;
+        this.#rowGap =
+            props.rowGap !== undefined && props.rowGap !== null
+                ? props.rowGap
+                : 12;
+
         if ("elements" in props && !("container" in props)) {
-            this.#elements =
+            this.#bricks = (
                 typeof props.elements === "string"
                     ? Array.from(document.querySelectorAll(props.elements))
-                    : props.elements;
+                    : props.elements
+            ).map(this.#elementToMasonryBrick.bind(this));
         } else if (!("elements" in props) && "container" in props) {
-            this.#elements = Array.from(this.#container.children).filter(
-                (el) => el instanceof HTMLElement,
-            );
+            this.#bricks = Array.from(this.#container.children)
+                .filter((el) => el instanceof HTMLElement)
+                .map(this.#elementToMasonryBrick.bind(this));
         }
 
         if (this.#columnWidth <= 0) {
@@ -159,5 +204,99 @@ class Masonry {
         }
     }
 
-    layout(): void {}
+    #elementToMasonryBrick(element: HTMLElement): MasonryBrick {
+        const domRect = element.getBoundingClientRect();
+
+        return {
+            element,
+            shape: new Rectangle(
+                { x: domRect.left, y: domRect.top },
+                { x: domRect.width, y: domRect.height },
+            ),
+            isPositioned: false,
+        };
+    }
+
+    layout(): void {
+        const boundaryDomRect =
+            this.#boundary instanceof Window
+                ? undefined
+                : this.#boundary.getBoundingClientRect();
+        const boundaryWidth =
+            this.#boundary instanceof Window
+                ? this.#boundary.innerWidth - this.#columnWidth
+                : boundaryDomRect.width;
+        const boundaryPositionX =
+            this.#boundary instanceof Window ? 0 : boundaryDomRect.left;
+        const boundaryPositionY =
+            this.#boundary instanceof Window ? 0 : boundaryDomRect.top;
+
+        for (let i = 0; i < this.#bricks.length; ++i) {
+            const brick = this.#bricks[i];
+
+            if (i === 0) {
+                brick.element.style.top = boundaryPositionX + "px";
+                brick.element.style.left = boundaryPositionY + "px";
+                brick.shape.positionCoordinate.x = boundaryPositionX;
+                brick.shape.positionCoordinate.y = boundaryPositionY;
+
+                continue;
+            }
+
+            const previousBrick = this.#bricks[i - 1];
+            const previousBrickRealWidth =
+                previousBrick.shape.positionCoordinate.x +
+                previousBrick.shape.dimensionCoordinate.x +
+                this.#columnGap;
+
+            const newTmpPosX =
+                previousBrickRealWidth < this.#columnWidth
+                    ? this.#columnWidth + this.#columnGap
+                    : previousBrickRealWidth;
+            const newPosX =
+                newTmpPosX >= boundaryWidth ? boundaryPositionX : newTmpPosX;
+
+            let sameColBrick: undefined | MasonryBrick;
+
+            for (let j = i - 1; j >= 0; --j) {
+                if (this.#bricks[j].shape.positionCoordinate.x === newPosX) {
+                    sameColBrick = this.#bricks[j];
+                    break;
+                }
+            }
+
+            if (sameColBrick) {
+                const newPosY =
+                    sameColBrick.shape.dimensionCoordinate.y +
+                    sameColBrick.shape.positionCoordinate.y +
+                    this.#rowGap;
+
+                if (
+                    sameColBrick.shape.overlaps(
+                        new Rectangle(
+                            {
+                                x: newPosX,
+                                y: sameColBrick.shape.positionCoordinate.y,
+                            },
+                            {
+                                x: brick.shape.dimensionCoordinate.x,
+                                y: brick.shape.dimensionCoordinate.y,
+                            },
+                        ),
+                    )
+                ) {
+                    brick.element.style.top = newPosY + "px";
+                    brick.shape.positionCoordinate.y = newPosY;
+                }
+            } else {
+                brick.element.style.top = boundaryPositionY + "px";
+                brick.shape.positionCoordinate.y = boundaryPositionY;
+            }
+
+            brick.element.style.left = newPosX + "px";
+            brick.shape.positionCoordinate.x = newPosX;
+        }
+    }
 }
+
+export default Masonry;

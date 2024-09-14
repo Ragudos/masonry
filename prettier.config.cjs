@@ -7,5 +7,5 @@ module.exports = {
     proseWrap: "preserve",
     semi: true,
     singleQuote: false,
-    bracketSpacing: false,
+    bracketSpacing: true,
 };
